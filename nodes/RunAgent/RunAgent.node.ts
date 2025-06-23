@@ -8,8 +8,21 @@ import {
 	IRequestOptions,
 } from 'n8n-workflow';
 
-
+/**
+ * RunAgent Node for n8n
+ * 
+ * This node allows users to execute PromptLayer workflows/agents through the PromptLayer API.
+ * It supports workflow execution with input variables, version control, and metadata.
+ * The node handles asynchronous execution with polling for completion status.
+ * 
+ * @class RunAgent
+ * @implements {INodeType}
+ */
 export class RunAgent implements INodeType {
+	/**
+	 * Node description containing all configuration, properties, and metadata
+	 * for the RunAgent node in the n8n workflow editor.
+	 */
 	description: INodeTypeDescription = {
 		// Basic node details will go here
 		displayName: 'Run Agent',
@@ -41,19 +54,13 @@ export class RunAgent implements INodeType {
 		// Required Fields
 		properties: [
 			{
-				// User must provide the name of the agent to run. No API infrastructure exists to list agents.
+				// User must provide the name of the agent to run. Use loadOptions in the future if want to have a dropdown menu
 				displayName: 'Agent/Workflow Name',
 				name: 'agentName',
 				type: 'string',
 				default: '',
 				required: true,
 				description: 'The name of the workflow to execute.',
-				// routing: {
-				// 	request: {
-				// 		method: 'POST',
-				// 		url: '/workflows/{{$agentName}}/run'
-				// 	}
-				// }
 			},
 			{
 				displayName: 'Workflow Version Number',
@@ -105,7 +112,22 @@ export class RunAgent implements INodeType {
 		]
 	};
 
-	// The execute method will go here
+	/**
+	 * Main execution method for the RunAgent node.
+	 * 
+	 * This method processes each input item and executes the specified PromptLayer workflow.
+	 * It handles the following workflow:
+	 * 1. Validates and parses input parameters
+	 * 2. Constructs the API request body 
+	 * 3. Initiates workflow execution via POST request
+	 * 4. Polls for completion status with timeout handling, 10 minutes
+	 * 5. Returns the final execution results
+	 * 
+	 * @async
+	 * @param {IExecuteFunctions} this - The execution context containing helper methods and node information
+	 * @returns {Promise<INodeExecutionData[][]>} Array of execution results for each input item
+	 * @throws {NodeOperationError} When required parameters are missing, JSON parsing fails, or API requests fail
+	 */
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
         const returnData: IDataObject[] = [];
@@ -155,7 +177,7 @@ export class RunAgent implements INodeType {
                     requestBody.workflow_label_name = additionalFields.workflowLabelName;
                 }
 
-                // Make HTTP request
+                // Make HTTP request to initiate workflow execution
                 const options: IRequestOptions = {
                     method: 'POST',
                     uri: `https://api.promptlayer.com/workflows/${agentName}/run`,
@@ -169,15 +191,16 @@ export class RunAgent implements INodeType {
                 };
 
                 const response = await this.helpers.requestWithAuthentication.call(this, 'RunAgentApi', options);
-                // returnData.push(response);
 
+				// Extract execution ID from response
 				const execId = response.workflow_version_execution_id as number;
 				if (!execId) {
 					throw new NodeOperationError(this.getNode(), 'Missing workflow_version_execution_id in response', { itemIndex: i });
 				}
 
+				// Poll for completion with timeout
 				const startTime = Date.now();
-				const timeoutMs = 10 * 60_000; // 10 minutes
+				const timeoutMs = 10 * 60_000; // 10 minutes timeout
 				let finalResult: any;
 
 				while (Date.now() - startTime < timeoutMs) {
@@ -186,7 +209,7 @@ export class RunAgent implements INodeType {
 						uri: 'https://api.promptlayer.com/workflow-version-execution-results',
 						qs: {
 							workflow_version_execution_id: execId,
-							return_all_outputs: additionalFields.returnAllOutputs,
+							return_all_outputs: additionalFields.returnAllOutputs || false,
 						},
 						headers: {
 							'X-API-KEY': `${credentials.apiKey}`
@@ -194,19 +217,15 @@ export class RunAgent implements INodeType {
 						json: true,
 					};
 
-					const pollResponse = await this.helpers.requestWithAuthentication.call(this, 'RunAgentApi', getPollingOptions);
-
-					// TODO: Continue developing the polling loop by getting the status code. It's currently undefined.
-					// Helpful tip: use the following command to quickly update the packages
-					// cd /home/laaettr/thinkBot/prompt_layer && npm run build && cd /home/laaettr/.n8n/custom/ && npm link n8n-nodes-RunAgent && n8n start
+					const pollResponse = await this.helpers.requestWithAuthentication.call(this, 'RunAgentApi', {...getPollingOptions, resolveWithFullResponse: true});
 					const statusCode = pollResponse.statusCode;
-					console.log(`pollResponse: ${pollResponse}`);
-					console.log(`statusCode: ${statusCode}`);
 
-					if (statusCode === 200) {
-						finalResult = pollResponse;
+					if (statusCode === 200 && pollResponse.statusMessage === 'OK') {
+						// Workflow completed successfully
+						finalResult = {"body": pollResponse.body};
 						break;
 					} else if (statusCode === 202) {
+						// Workflow still processing, wait before polling again
 						await new Promise(res => setTimeout(res, 5000)); // wait 5 seconds
 					} else {
 						throw new NodeOperationError(this.getNode(), `Unexpected status code ${statusCode}`, { itemIndex: i });
