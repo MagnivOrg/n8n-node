@@ -11,8 +11,8 @@ import {
 /**
  * RunAgent Node for n8n
  * 
- * This node allows users to execute PromptLayer workflows/agents through the PromptLayer API.
- * It supports workflow execution with input variables, version control, and metadata.
+ * This node allows users to execute PromptLayer Agents through the PromptLayer API.
+ * It supports Agent execution with input variables, version control, and metadata.
  * The node handles asynchronous execution with polling for completion status.
  * 
  * @class RunAgent
@@ -30,7 +30,7 @@ export class RunAgent implements INodeType {
 		icon: 'file:promptLayer.svg',
 		group: ['transform'],
 		version: 1,
-		subtitle: 'Run Prompt Layer Agent/Workflow',
+		subtitle: 'Run PromptLayer Agent',
 		description: 'Run an Agent from the PromptLayer API',
 		defaults: {
 			name: 'Run Agent Default',
@@ -55,27 +55,27 @@ export class RunAgent implements INodeType {
 		properties: [
 			{
 				// User must provide the name of the agent to run. Use loadOptions in the future if want to have a dropdown menu
-				displayName: 'Agent/Workflow Name',
+				displayName: 'Agent Name',
 				name: 'agentName',
 				type: 'string',
 				default: '',
 				required: true,
-				description: 'The name of the workflow to execute.',
+				description: 'The name of the Agent to execute.',
 			},
 			{
-				displayName: 'Workflow Version Number',
-				name: 'workflowVersionNumber',
+				displayName: 'Agent Version Number',
+				name: 'agentVersionNumber',
 				type: 'string',
 				default: '',
 				placeholder: '1',
-				description: 'Specify a workflow version number to run a specific version.',
+				description: 'Specify an Agent version number to run a specific version.',
 			},
 			{
 				displayName: 'Input Variables',
 				name: 'inputVariables',
 				type: 'json',
 				default: '{}',
-				description: 'A dictionary of input variables required by the workflow.',
+				description: 'A dictionary of input variables required by the Agent.',
 			},
 
 			// Optionally fields will go here
@@ -98,14 +98,14 @@ export class RunAgent implements INodeType {
 						name: 'returnAllOutputs',
 						type: 'boolean',
 						default: false,
-						description: 'If set to true, all outputs from the workflow execution will be returned.',
+						description: 'If set to true, all outputs from the Agent execution will be returned.',
 					},
 					{
-						displayName: 'Workflow Label Name',
-						name: 'workflowLabelName',
+						displayName: 'Agent Label Name',
+						name: 'agentLabelName',
 						type: 'string',
 						default: "",
-						description: 'Specify a workflow label name to run a specific labeled version.',
+						description: 'Specify an Agent label name to run a specific labeled version.',
 					}
 				]
 			}	
@@ -115,11 +115,11 @@ export class RunAgent implements INodeType {
 	/**
 	 * Main execution method for the RunAgent node.
 	 * 
-	 * This method processes each input item and executes the specified PromptLayer workflow.
-	 * It handles the following workflow:
+	 * This method processes each input item and executes the specified PromptLayer Agent.
+	 * It handles the following Agent process:
 	 * 1. Validates and parses input parameters
 	 * 2. Constructs the API request body 
-	 * 3. Initiates workflow execution via POST request
+	 * 3. Initiates Agent execution via POST request
 	 * 4. Polls for completion status with timeout handling, 10 minutes
 	 * 5. Returns the final execution results
 	 * 
@@ -139,7 +139,7 @@ export class RunAgent implements INodeType {
             try {
 				// Get node parameters
                 const agentName = this.getNodeParameter('agentName', i) as string;
-                const workflowVersionNumber = this.getNodeParameter('workflowVersionNumber', i) as string;
+                const agentVersionNumber = this.getNodeParameter('agentVersionNumber', i) as string;
                 const inputVariables = this.getNodeParameter('inputVariables', i) as string;
                 const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
 				
@@ -157,8 +157,8 @@ export class RunAgent implements INodeType {
                 };
 
                 // Add optional parameters
-                if (workflowVersionNumber) {
-                    requestBody.workflow_version_number = workflowVersionNumber;
+                if (agentVersionNumber) {
+                    requestBody.agent_version_number = agentVersionNumber;
                 }
 
                 if (additionalFields.metadata) {
@@ -173,11 +173,11 @@ export class RunAgent implements INodeType {
                     requestBody.return_all_outputs = additionalFields.returnAllOutputs;
                 }
 
-                if (additionalFields.workflowLabelName) {
-                    requestBody.workflow_label_name = additionalFields.workflowLabelName;
+                if (additionalFields.agentLabelName) {
+                    requestBody.agent_label_name = additionalFields.agentLabelName;
                 }
 
-                // Make HTTP request to initiate workflow execution
+                // Make HTTP request to initiate Agent execution
                 const options: IRequestOptions = {
                     method: 'POST',
                     uri: `https://api.promptlayer.com/workflows/${agentName}/run`,
@@ -221,11 +221,11 @@ export class RunAgent implements INodeType {
 					const statusCode = pollResponse.statusCode;
 
 					if (statusCode === 200 && pollResponse.statusMessage === 'OK') {
-						// Workflow completed successfully
+						// Agent completed successfully
 						finalResult = {"body": pollResponse.body};
 						break;
 					} else if (statusCode === 202) {
-						// Workflow still processing, wait before polling again
+						// Agent still processing, wait before polling again
 						await new Promise(res => setTimeout(res, 5000)); // wait 5 seconds
 					} else {
 						throw new NodeOperationError(this.getNode(), `Unexpected status code ${statusCode}`, { itemIndex: i });
@@ -246,7 +246,7 @@ export class RunAgent implements INodeType {
                         pairedItem: { item: i }
                     });
                 } else {
-                    throw new NodeOperationError(this.getNode(), `Error executing workflow: ${error.message}`, { itemIndex: i });
+                    throw new NodeOperationError(this.getNode(), `Error executing Agent: ${error.message}`, { itemIndex: i });
                 }
             }
         }
