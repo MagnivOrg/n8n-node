@@ -111,7 +111,17 @@ export class RunAgent implements INodeType {
 						type: 'string',
 						default: "",
 						description: 'Specify an Agent label name to run a specific labeled version.',
-					}
+					},
+					{
+						displayName: 'Timeout',
+						name: 'timeout',
+						type: 'number',
+						default: 10,
+						description: 'Maximum time (in minutes) to wait for agent execution before timing out. Default is 10 minutes.',
+						typeOptions: {
+							minValue: 1,
+						},
+					},
 				]
 			}	
 		]
@@ -249,7 +259,8 @@ export class RunAgent implements INodeType {
 
 				// Poll for completion with timeout
 				const startTime = Date.now();
-				const timeoutMs = 10 * 60_000; // 10 minutes timeout
+				const timeoutMinutes = additionalFields.timeout !== undefined ? Number(additionalFields.timeout) : 10;
+				const timeoutMs = timeoutMinutes * 60_000; // Use user-provided or default 10 minutes
 				let finalResult: any;
 
 				while (Date.now() - startTime < timeoutMs) {
