@@ -68,12 +68,36 @@ export class RunAgent implements INodeType {
 				},
 			},
 			{
+				displayName: 'Use Agent Label Name',
+				name: 'useAgentLabel',
+				type: 'boolean',
+				default: false,
+				description: 'Switch to use Agent Label Name instead of Agent Version Number.',
+			},
+			{
 				displayName: 'Agent Version Number',
 				name: 'agentVersionNumber',
-				type: 'string',
+				type: 'number',
 				default: '',
 				placeholder: '1',
 				description: 'Specify an Agent version number to run a specific version.',
+				displayOptions: {
+					show: {
+						useAgentLabel: [false],
+					},
+				},
+			},
+			{
+				displayName: 'Agent Label Name',
+				name: 'agentLabelName',
+				type: 'string',
+				default: '',
+				description: 'Specify an Agent label name to run a specific labeled version.',
+				displayOptions: {
+					show: {
+						useAgentLabel: [true],
+					},
+				},
 			},
 			{
 				displayName: 'Input Variables',
@@ -104,13 +128,6 @@ export class RunAgent implements INodeType {
 						type: 'boolean',
 						default: false,
 						description: 'If set to true, all outputs from the Agent execution will be returned.',
-					},
-					{
-						displayName: 'Agent Label Name',
-						name: 'agentLabelName',
-						type: 'string',
-						default: "",
-						description: 'Specify an Agent label name to run a specific labeled version.',
 					},
 					{
 						displayName: 'Timeout',
@@ -160,10 +177,10 @@ export class RunAgent implements INodeType {
 				// Map each agent in the response to a dropdown option
 				for (const agent of response.items) {
 					const name = agent.name;
-					const id = agent.id;
+					// const id = agent.id;
 					returnData.push({
 						name: name, // Displayed in the dropdown
-						value: id   // Value used internally
+						value: name   // Value used internally
 					});
 				}
 				return returnData;
@@ -190,6 +207,7 @@ export class RunAgent implements INodeType {
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
         const returnData: IDataObject[] = [];
+		debugger;
 
         // Get credentials
         const credentials = await this.getCredentials('RunAgentApi');
@@ -198,7 +216,9 @@ export class RunAgent implements INodeType {
             try {
 				// Get node parameters
                 const agentName = this.getNodeParameter('agentName', i) as string;
-                const agentVersionNumber = this.getNodeParameter('agentVersionNumber', i) as string;
+                const useAgentLabel = this.getNodeParameter('useAgentLabel', i) === true;
+                const agentVersionNumber = !useAgentLabel ? Number(this.getNodeParameter('agentVersionNumber', i, null)): null;
+                const agentLabelName = useAgentLabel ? this.getNodeParameter('agentLabelName', i, '') as string : '';
                 const inputVariables = this.getNodeParameter('inputVariables', i) as string;
                 const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
 				
@@ -217,7 +237,11 @@ export class RunAgent implements INodeType {
 
                 // Add optional parameters
                 if (agentVersionNumber) {
-                    requestBody.agent_version_number = agentVersionNumber;
+                    requestBody.workflow_version_number = agentVersionNumber;
+                }
+
+                if (agentLabelName) {
+                    requestBody.workflow_label_name = agentLabelName;
                 }
 
                 if (additionalFields.metadata) {
@@ -230,10 +254,6 @@ export class RunAgent implements INodeType {
 
                 if (additionalFields.returnAllOutputs) {
                     requestBody.return_all_outputs = additionalFields.returnAllOutputs;
-                }
-
-                if (additionalFields.agentLabelName) {
-                    requestBody.agent_label_name = additionalFields.agentLabelName;
                 }
 
                 // Make HTTP request to initiate Agent execution
