@@ -6,6 +6,8 @@ import {
     IDataObject,
     NodeOperationError,
 	IRequestOptions,
+	ILoadOptionsFunctions,
+	INodePropertyOptions,
 } from 'n8n-workflow';
 
 /**
@@ -33,7 +35,7 @@ export class RunAgent implements INodeType {
 		subtitle: 'Run PromptLayer Agent',
 		description: 'Run an Agent from the PromptLayer API',
 		defaults: {
-			name: 'Run Agent Default',
+			name: 'Run Agent',
 		},
 		inputs: ['main'],
 		outputs: ['main'],
@@ -57,10 +59,13 @@ export class RunAgent implements INodeType {
 				// User must provide the name of the agent to run. Use loadOptions in the future if want to have a dropdown menu
 				displayName: 'Agent Name',
 				name: 'agentName',
-				type: 'string',
+				type: 'options',
 				default: '',
 				required: true,
 				description: 'The name of the Agent to execute.',
+				typeOptions: {
+					loadOptionsMethod: 'getWorkflows',
+				},
 			},
 			{
 				displayName: 'Agent Version Number',
@@ -110,6 +115,50 @@ export class RunAgent implements INodeType {
 				]
 			}	
 		]
+	};
+
+	methods = {
+		loadOptions: {
+			/**
+			 * Fetches available PromptLayer agents for the dropdown in the Agent Name field.
+			 *
+			 * This method is used by n8n's loadOptions system to dynamically populate the dropdown
+			 * with all available agents from the PromptLayer API. It authenticates using the user's
+			 * credentials, sends a GET request to /workflows, and maps the response to the format
+			 * required by n8n dropdowns (name/value pairs).
+			 *
+			 * @param {ILoadOptionsFunctions} this - n8n context for loadOptions
+			 * @returns {Promise<INodePropertyOptions[]>} Array of dropdown options for agents
+			 */
+			async getWorkflows(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				// Retrieve API credentials from n8n credential store
+				const credentials = await this.getCredentials('RunAgentApi');
+				const returnData: INodePropertyOptions[] = [];
+				// Prepare the API request to fetch all workflows/agents
+				const options: IRequestOptions = {
+					method: 'GET',
+					url: 'https://api.promptlayer.com/workflows',
+					headers: {
+						'Accept': 'application/json',
+						'Content-Type': 'application/json',
+						'X-API-KEY': String(credentials.apiKey), // Use the user's API key for authentication
+					},
+					json: true,
+				};
+				// Make the API request
+				const response = await this.helpers.request!(options);
+				// Map each agent in the response to a dropdown option
+				for (const agent of response.items) {
+					const name = agent.name;
+					const id = agent.id;
+					returnData.push({
+						name: name, // Displayed in the dropdown
+						value: id   // Value used internally
+					});
+				}
+				return returnData;
+			},
+		},
 	};
 
 	/**
