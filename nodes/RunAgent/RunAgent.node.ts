@@ -29,7 +29,7 @@ export class RunAgent implements INodeType {
 		// Basic node details will go here
 		displayName: 'Run Agent',
 		name: 'RunAgent',
-		icon: 'file:promptLayer.svg',
+		icon: 'file:runAgent.svg',
 		group: ['transform'],
 		version: 1,
 		subtitle: 'Run PromptLayer Agent',
