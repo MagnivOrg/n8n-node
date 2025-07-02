@@ -207,7 +207,6 @@ export class RunAgent implements INodeType {
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
         const returnData: IDataObject[] = [];
-		debugger;
 
         // Get credentials
         const credentials = await this.getCredentials('RunAgentApi');
