@@ -17,10 +17,10 @@ import {
  * It supports Agent execution with input variables, version control, and metadata.
  * The node handles asynchronous execution with polling for completion status.
  *
- * @class RunAgent
+ * @class PromptLayerRunAgent
  * @implements {INodeType}
  */
-export class RunAgent implements INodeType {
+export class PromptLayerRunAgent implements INodeType {
 	/**
 	 * Node description containing all configuration, properties, and metadata
 	 * for the RunAgent node in the n8n workflow editor.
@@ -41,7 +41,7 @@ export class RunAgent implements INodeType {
 		outputs: ['main'],
 		credentials: [
 			{
-				name: 'PromptLayerRunAgentApi',
+				name: 'runAgentApi',
 				required: true,
 			},
 		],
@@ -161,7 +161,7 @@ export class RunAgent implements INodeType {
 			 */
 			async getWorkflows(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				// Retrieve API credentials from n8n credential store
-				const credentials = await this.getCredentials('RunAgentApi');
+				const credentials = await this.getCredentials('runAgentApi');
 				const returnData: INodePropertyOptions[] = [];
 				let page = 1;
 				const perPage = 100;
@@ -199,7 +199,7 @@ export class RunAgent implements INodeType {
 	};
 
 	/**
-	 * Main execution method for the RunAgent node.
+	 * Main execution method for the PromptLayerRunAgent node.
 	 *
 	 * This method processes each input item and executes the specified PromptLayer Agent.
 	 * It handles the following Agent process:
@@ -219,7 +219,7 @@ export class RunAgent implements INodeType {
 		const returnData: IDataObject[] = [];
 
 		// Get credentials
-		const credentials = await this.getCredentials('RunAgentApi');
+		const credentials = await this.getCredentials('runAgentApi');
 
 		for (let i = 0; i < items.length; i++) {
 			try {
@@ -292,7 +292,7 @@ export class RunAgent implements INodeType {
 
 				const response = await this.helpers.requestWithAuthentication.call(
 					this,
-					'RunAgentApi',
+					'runAgentApi',
 					options,
 				);
 
@@ -329,7 +329,7 @@ export class RunAgent implements INodeType {
 
 					const pollResponse = await this.helpers.requestWithAuthentication.call(
 						this,
-						'RunAgentApi',
+						'runAgentApi',
 						{ ...getPollingOptions, resolveWithFullResponse: true },
 					);
 					const statusCode = pollResponse.statusCode;
