@@ -5,11 +5,11 @@
   "keywords": [
     "n8n-community-node-package"
   ],
-  "license": "MIT",
+  "license": "",
   "homepage": "",
   "author": {
-    "name": "Giraldo Pino",
-    "email": "giraldo@automatforge.com"
+    "name": "ThinkBot LLC - Giraldo Pino",
+    "email": "team@thinkbot.agency"
   },
   "repository": {
     "type": "git",
