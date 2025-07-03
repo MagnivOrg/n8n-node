@@ -19,7 +19,7 @@ export class RunAgentApi implements ICredentialType {
 	authenticate: IAuthenticateGeneric = {
 		type: 'generic',
 		properties: {
-			header: {
+			headers: {
 				Authorization: '=Bearer {{$credentials.apiKey}}',
 			},
 		},
