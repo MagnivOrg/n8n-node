@@ -27,21 +27,21 @@ export class RunAgent implements INodeType {
 	 */
 	description: INodeTypeDescription = {
 		// Basic node details will go here
-		displayName: 'Run Agent',
-		name: 'RunAgent',
+		displayName: 'PromptLayer Run Agent',
+		name: 'PromptLayerRunAgent',
 		icon: 'file:runAgent.svg',
 		group: ['transform'],
 		version: 1,
 		subtitle: 'Run PromptLayer Agent',
 		description: 'Run an Agent from the PromptLayer API',
 		defaults: {
-			name: 'Run Agent',
+			name: 'PromptLayer Run Agent',
 		},
 		inputs: ['main'],
 		outputs: ['main'],
 		credentials: [
 			{
-				name: 'RunAgentApi',
+				name: 'PromptLayerRunAgentApi',
 				required: true,
 			},
 		],
