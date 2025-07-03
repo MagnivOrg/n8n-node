@@ -1,5 +1,5 @@
 {
-  "name": "n8n-nodes-RunAgent",
+  "name": "n8n-nodes-promptlayer-runagent",
   "version": "0.1.0",
   "description": "n8n community node for PromptLayer. Currently only handles RunAgent",
   "keywords": [
