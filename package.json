@@ -1,12 +1,12 @@
 {
   "name": "n8n-nodes-RunAgent",
   "version": "0.1.0",
-  "description": "",
+  "description": "n8n community node for PromptLayer. Currently only handles RunAgent",
   "keywords": [
     "n8n-community-node-package"
   ],
-  "license": "",
-  "homepage": "",
+  "license": "MIT",
+  "homepage": "https://thinkbot.agency",
   "author": {
     "name": "ThinkBot LLC - Giraldo Pino",
     "email": "team@thinkbot.agency"
@@ -35,9 +35,9 @@
     "credentials": [
       "dist/credentials/RunAgentApi.credentials.js"
     ],
-    "nodes": [
-      "dist/nodes/RunAgent/RunAgent.node.js"
-    ]
+    		"nodes": [
+			"dist/nodes/RunAgent/PromptLayerRunAgent.node.js"
+		]
   },
   "devDependencies": {
     "@typescript-eslint/parser": "~8.32.0",
