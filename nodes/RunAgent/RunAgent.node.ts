@@ -161,27 +161,35 @@ export class RunAgent implements INodeType {
 				// Retrieve API credentials from n8n credential store
 				const credentials = await this.getCredentials('RunAgentApi');
 				const returnData: INodePropertyOptions[] = [];
-				// Prepare the API request to fetch all workflows/agents
-				const options: IRequestOptions = {
-					method: 'GET',
-					url: 'https://api.promptlayer.com/workflows',
-					headers: {
-						'Accept': 'application/json',
-						'Content-Type': 'application/json',
-						'X-API-KEY': String(credentials.apiKey), // Use the user's API key for authentication
-					},
-					json: true,
-				};
-				// Make the API request
-				const response = await this.helpers.request!(options);
-				// Map each agent in the response to a dropdown option
-				for (const agent of response.items) {
-					const name = agent.name;
-					// const id = agent.id;
-					returnData.push({
-						name: name, // Displayed in the dropdown
-						value: name   // Value used internally
-					});
+				let page = 1;
+				const perPage = 100;
+				let hasNext = true;
+
+				while (hasNext) {
+					const options: IRequestOptions = {
+						method: 'GET',
+						url: `https://api.promptlayer.com/workflows`,
+						qs: {
+							page,
+							per_page: perPage,
+						},
+						headers: {
+							'Accept': 'application/json',
+							'Content-Type': 'application/json',
+							'X-API-KEY': String(credentials.apiKey),
+						},
+						json: true,
+					};
+					const response = await this.helpers.request!(options);
+					for (const agent of response.items) {
+						const name = agent.name;
+						returnData.push({
+							name: name,
+							value: name
+						});
+					}
+					hasNext = response.has_next;
+					page = response.next_num || (page + 1);
 				}
 				return returnData;
 			},
