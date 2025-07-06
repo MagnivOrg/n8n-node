@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-promptlayer-runagent",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "n8n community node for PromptLayer. Currently only handles RunAgent",
   "keywords": [
     "n8n-community-node-package"
@@ -35,9 +35,9 @@
     "credentials": [
       "dist/credentials/RunAgentApi.credentials.js"
     ],
-    		"nodes": [
-			"dist/nodes/RunAgent/PromptLayerRunAgent.node.js"
-		]
+    "nodes": [
+      "dist/nodes/RunAgent/PromptLayerRunAgent.node.js"
+    ]
   },
   "devDependencies": {
     "@typescript-eslint/parser": "~8.32.0",
@@ -51,8 +51,5 @@
   },
   "peerDependencies": {
     "n8n-workflow": "*"
-  },
-  "dependencies": {
-    "promptlayer": "^1.0.31"
   }
 }
