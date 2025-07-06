@@ -80,7 +80,7 @@ export class PromptLayerRunAgent implements INodeType {
 				name: 'agentVersionNumber',
 				type: 'number',
 				default: '',
-				placeholder: '1',
+				placeholder: '0',
 				description: 'Specify an Agent version number to run a specific version',
 				displayOptions: {
 					show: {
@@ -107,7 +107,12 @@ export class PromptLayerRunAgent implements INodeType {
 				default: '{}',
 				description: 'A dictionary of input variables required by the Agent',
 			},
-
+			{
+				displayName: 'Looking for custom n8n nodes or solutions? <a href="https://thinkbot.agency/?utm_source=n8n&utm_medium=node&utm_campaign=promptlayer">thinkbot.agency</a>',
+				name: 'thinkbotAdvert',
+				type: 'notice',
+				default: '',
+			},
 			// Optionally fields will go here
 			{
 				displayName: 'Additional Fields',
