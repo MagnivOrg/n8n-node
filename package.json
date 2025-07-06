@@ -14,7 +14,10 @@
     "url": "git+https://github.com/MagnivOrg/n8n-node.git"
   },
   "license": "MIT",
-  "author": "ThinkBot LLC <team@thinkbot.agency>",
+  "author": {
+    "name": "ThinkBot LLC",
+    "email": "team@thinkbot.agency"
+  },
   "type": "commonjs",
   "main": "index.js",
   "files": [
