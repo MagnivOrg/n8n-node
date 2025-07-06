@@ -2,7 +2,7 @@
 
 This package provides a custom n8n node for running [PromptLayer Agents](https://promptlayer.com/) directly from your n8n workflows. The **PromptLayer RunAgent** node allows you to execute PromptLayer Agents, pass input variables, select agent versions or labels, and retrieve results programmatically.
 
-Built by Justin Adamski and Giraldo Pino from [ThinkBot](https://thinkbot.agency).
+Built by Justin Adamski and Giraldo Pino from [ThinkBot](https://thinkbot.agency/?utm_source=gitnpm&utm_medium=readme&utm_campaign=promptlayer).
 
 ---
 
