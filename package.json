@@ -1,24 +1,25 @@
 {
-  "name": "n8n-nodes-promptlayer-runagent",
+  "name": "@promptlayer/n8n-nodes-promptlayer-runagent",
   "version": "0.1.2",
   "description": "n8n community node for PromptLayer. Currently only handles RunAgent. Built by thinkbot.agency",
   "keywords": [
     "n8n-community-node-package"
   ],
-  "license": "MIT",
   "homepage": "https://promptlayer.com/",
-  "author": {
-    "name": "ThinkBot LLC",
-    "email": "team@thinkbot.agency"
+  "bugs": {
+    "url": "https://github.com/MagnivOrg/n8n-node/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/MagnivOrg/n8n-node.git"
+    "url": "git+https://github.com/MagnivOrg/n8n-node.git"
   },
-  "engines": {
-    "node": ">=20.15"
-  },
+  "license": "MIT",
+  "author": "ThinkBot LLC <team@thinkbot.agency>",
+  "type": "commonjs",
   "main": "index.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "npx rimraf dist && tsc && gulp build:icons",
     "dev": "tsc --watch",
@@ -27,17 +28,7 @@
     "lintfix": "eslint nodes credentials package.json --fix",
     "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes credentials package.json"
   },
-  "files": [
-    "dist"
-  ],
-  "n8n": {
-    "n8nNodesApiVersion": 1,
-    "credentials": [
-      "dist/credentials/RunAgentApi.credentials.js"
-    ],
-    "nodes": [
-      "dist/nodes/RunAgent/PromptLayerRunAgent.node.js"
-    ]
+  "dependencies": {
   },
   "devDependencies": {
     "@typescript-eslint/parser": "~8.32.0",
@@ -51,5 +42,17 @@
   },
   "peerDependencies": {
     "n8n-workflow": "*"
+  },
+  "engines": {
+    "node": ">=20.15"
+  },
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/RunAgentApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/RunAgent/PromptLayerRunAgent.node.js"
+    ]
   }
 }
