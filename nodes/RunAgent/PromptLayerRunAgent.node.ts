@@ -108,7 +108,7 @@ export class PromptLayerRunAgent implements INodeType {
 				description: 'A dictionary of input variables required by the Agent',
 			},
 			{
-				displayName: 'Looking for custom n8n nodes or solutions? <a href="https://thinkbot.agency/?utm_source=n8n&utm_medium=node&utm_campaign=promptlayer">thinkbot.agency</a>',
+				displayName: 'Looking for custom n8n nodes or solutions? <a href="https://thinkbot.agency/?utm_source=n8n&utm_medium=node&utm_campaign=promptlayer" target="_blank">thinkbot.agency</a>',
 				name: 'thinkbotAdvert',
 				type: 'notice',
 				default: '',
