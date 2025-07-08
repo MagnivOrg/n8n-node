@@ -278,9 +278,8 @@ export class PromptLayerRunAgent implements INodeType {
 					}
 				}
 
-				if (additionalFields.returnAllOutputs) {
-					requestBody.return_all_outputs = additionalFields.returnAllOutputs;
-				}
+				// Always include return_all_outputs parameter, defaulting to false if not specified
+				requestBody.return_all_outputs = additionalFields.returnAllOutputs || false;
 
 				// Make HTTP request to initiate Agent execution
 				const options: IRequestOptions = {
