@@ -1,17 +1,17 @@
 {
-	"node": "n8n-nodes-base.RunAgent",
+	"node": "n8n-nodes-base.promptLayerRunAgent",
 	"nodeVersion": "1.0",
 	"codexVersion": "1.0",
 	"categories": ["Miscellaneous"],
 	"resources": {
 		"credentialDocumentation": [
 			{
-				"url": ""
+				"url": "https://github.com/MagnivOrg/n8n-node/blob/master/README.md"
 			}
 		],
 		"primaryDocumentation": [
 			{
-				"url": ""
+				"url": "https://github.com/MagnivOrg/n8n-node/blob/master/README.md"
 			}
 		]
 	}
