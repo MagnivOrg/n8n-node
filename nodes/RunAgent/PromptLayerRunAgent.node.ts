@@ -146,6 +146,13 @@ export class PromptLayerRunAgent implements INodeType {
 							minValue: 1,
 						},
 					},
+					{
+						displayName: 'Enable Debug Logs',
+						name: 'debug',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to print verbose logs to the n8n console for troubleshooting',
+					},
 				],
 			},
 		],
@@ -221,13 +228,118 @@ export class PromptLayerRunAgent implements INodeType {
 	 */
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
-		const returnData: IDataObject[] = [];
 
 		// Get credentials
 		const credentials = await this.getCredentials('runAgentApi');
 
-		for (let i = 0; i < items.length; i++) {
+		// Get stored state to track progress across wait/resume cycles
+		const storedState = this.getWorkflowStaticData('node');
+		let currentItemIndex = Number(storedState.currentItemIndex) || 0;
+
+		// Restore previously processed results from stored state
+		const returnData: INodeExecutionData[] = (storedState.processedResults as INodeExecutionData[]) || [];
+
+		// Check if we're resuming a waiting execution
+		for (let i = currentItemIndex; i < items.length; i++) {
+			const stateKey = `promptLayerExecution_${i}`;
+
+			// If this item has stored state, we need to check its status first
+			if (storedState[stateKey]) {
+				const state = storedState[stateKey] as { execId: number; startTime: number };
+				const execId = state.execId;
+				const startTime = state.startTime;
+
+				// Get timeout setting for this item
+				const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
+				const timeoutMinutes = additionalFields.timeout !== undefined ? Number(additionalFields.timeout) : 10;
+				const timeoutMs = timeoutMinutes * 60_000;
+
+				// Check timeout
+				if (Date.now() - startTime >= timeoutMs) {
+					delete storedState[stateKey];
+					throw new NodeOperationError(this.getNode(), `Execution timed out after ${timeoutMinutes} minutes`, {
+						itemIndex: i,
+					});
+				}
+
+				// Check current status
+				const getPollingOptions: IRequestOptions = {
+					method: 'GET',
+					uri: 'https://api.promptlayer.com/workflow-version-execution-results',
+					qs: {
+						workflow_version_execution_id: execId,
+						return_all_outputs: additionalFields.returnAllOutputs || false,
+					},
+					headers: {
+						'X-API-KEY': `${credentials.apiKey}`,
+					},
+					json: true,
+				};
+
+				const pollResponse = await this.helpers.requestWithAuthentication.call(
+					this,
+					'runAgentApi',
+					{ ...getPollingOptions, resolveWithFullResponse: true },
+				);
+				// Some HTTP libraries return `status`, others `statusCode`
+				const statusCode = (pollResponse.statusCode ?? pollResponse.status) as number;
+				const debug = (this.getNodeParameter('additionalFields', i) as IDataObject).debug === true;
+				if (debug) {
+					console.log(`[PromptLayerRunAgent] Poll result for execId ${execId}: status ${statusCode}`);
+				}
+
+				if (statusCode === 200 || statusCode === 201) {
+					// Agent completed successfully
+					delete storedState[stateKey];
+
+					const resultData = pollResponse.body;
+					if (debug) {
+						console.log(`[PromptLayerRunAgent] Execution ${execId} completed. Pushing result for item #${i}`);
+					}
+					const newResult = {
+						json: resultData,
+						pairedItem: { item: i },
+					};
+
+					returnData.push(newResult);
+					storedState.processedResults = returnData;
+
+					// Move to next item
+					storedState.currentItemIndex = i + 1;
+					continue;
+
+				} else if (statusCode === 202) {
+					// Still processing - need to wait more
+					const pollingInterval = 10000; // 10 seconds
+					const timeRemaining = timeoutMs - (Date.now() - startTime);
+					const waitTime = Math.min(pollingInterval, timeRemaining);
+					if (debug) {
+						console.log(`[PromptLayerRunAgent] Waiting ${waitTime}ms before next poll for execId ${execId}`);
+					}
+
+					if (waitTime <= 0) {
+						continue; // Will be caught by timeout check on next execution
+					}
+
+					// Set up for next resume and wait
+					storedState.currentItemIndex = i;
+					await this.putExecutionToWait(new Date(Date.now() + waitTime));
+					// Execution stops here and will resume from the beginning
+
+				} else {
+					// Error status
+					delete storedState[stateKey];
+					throw new NodeOperationError(this.getNode(), `API returned status code ${statusCode}: ${pollResponse.statusMessage}`, {
+						itemIndex: i,
+					});
+				}
+			}
+
+			// If no stored state, start new execution for this item
 			try {
+				// Update current item index
+				storedState.currentItemIndex = i;
+
 				// Get node parameters
 				const agentName = this.getNodeParameter('agentName', i) as string;
 				const useAgentLabel = this.getNodeParameter('useAgentLabel', i) === true;
@@ -239,11 +351,15 @@ export class PromptLayerRunAgent implements INodeType {
 					: '';
 				const inputVariables = this.getNodeParameter('inputVariables', i) as string;
 				const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
+				const debug = additionalFields.debug === true;
+				if (debug) {
+					console.log(`[PromptLayerRunAgent] Starting execution for item #${i} (agent: ${agentName})`);
+				}
 
-				// Parse input variables JSON
-				let parsedInputVariables: IDataObject = {};
+				// Parse input variables
+				let parsedInputVariables: Record<string, any>;
 				try {
-					parsedInputVariables = JSON.parse(inputVariables);
+					parsedInputVariables = JSON.parse(inputVariables || '{}');
 				} catch (error) {
 					throw new NodeOperationError(
 						this.getNode(),
@@ -257,15 +373,13 @@ export class PromptLayerRunAgent implements INodeType {
 					input_variables: parsedInputVariables,
 				};
 
-				// Add optional parameters
-				if (agentVersionNumber) {
-					requestBody.workflow_version_number = agentVersionNumber;
+				if (useAgentLabel && agentLabelName) {
+					requestBody.agent_label_name = agentLabelName;
+				} else if (!useAgentLabel && agentVersionNumber !== null) {
+					requestBody.agent_version_number = agentVersionNumber;
 				}
 
-				if (agentLabelName) {
-					requestBody.workflow_label_name = agentLabelName;
-				}
-
+				// Handle metadata if provided
 				if (additionalFields.metadata) {
 					try {
 						requestBody.metadata = JSON.parse(additionalFields.metadata as string);
@@ -278,10 +392,9 @@ export class PromptLayerRunAgent implements INodeType {
 					}
 				}
 
-				// Always include return_all_outputs parameter, defaulting to false if not specified
 				requestBody.return_all_outputs = additionalFields.returnAllOutputs || false;
 
-				// Make HTTP request to initiate Agent execution
+				// Start new execution
 				const options: IRequestOptions = {
 					method: 'POST',
 					uri: `https://api.promptlayer.com/workflows/${agentName}/run`,
@@ -300,8 +413,10 @@ export class PromptLayerRunAgent implements INodeType {
 					options,
 				);
 
-				// Extract execution ID from response
 				const execId = response.workflow_version_execution_id as number;
+				if (debug) {
+					console.log(`[PromptLayerRunAgent] Started execution. execId=${execId}`);
+				}
 				if (!execId) {
 					throw new NodeOperationError(
 						this.getNode(),
@@ -310,62 +425,34 @@ export class PromptLayerRunAgent implements INodeType {
 					);
 				}
 
-				// Poll for completion with timeout
+				// Store execution state
 				const startTime = Date.now();
-				const timeoutMinutes =
-					additionalFields.timeout !== undefined ? Number(additionalFields.timeout) : 10;
-				const timeoutMs = timeoutMinutes * 60_000; // Use user-provided or default 10 minutes
-				let finalResult: any;
+				storedState[stateKey] = { execId, startTime };
 
-				while (Date.now() - startTime < timeoutMs) {
-					const getPollingOptions: IRequestOptions = {
-						method: 'GET',
-						uri: 'https://api.promptlayer.com/workflow-version-execution-results',
-						qs: {
-							workflow_version_execution_id: execId,
-							return_all_outputs: additionalFields.returnAllOutputs || false,
-						},
-						headers: {
-							'X-API-KEY': `${credentials.apiKey}`,
-						},
-						json: true,
+				// Initial 10 second wait before first status check
+				const waitTime = 10000;
+				if (debug) {
+					console.log(`[PromptLayerRunAgent] Waiting initial ${waitTime}ms before first poll for execId ${execId}`);
+				}
+
+				// Wait before first status check
+				await this.putExecutionToWait(new Date(Date.now() + waitTime));
+				// Execution stops here and will resume from the beginning
+
+			} catch (error) {
+				// Clean up state for this item on error
+				const stateKey = `promptLayerExecution_${i}`;
+				delete storedState[stateKey];
+
+				if (this.continueOnFail()) {
+					const errorResult = {
+						json: { error: error.message },
+						pairedItem: { item: i },
 					};
 
-					const pollResponse = await this.helpers.requestWithAuthentication.call(
-						this,
-						'runAgentApi',
-						{ ...getPollingOptions, resolveWithFullResponse: true },
-					);
-					const statusCode = pollResponse.statusCode;
-
-					if (statusCode === 200 && pollResponse.statusMessage === 'OK') {
-						// Agent completed successfully
-						finalResult = { body: pollResponse.body };
-						break;
-					} else if (statusCode === 202) {
-						// Agent still processing, wait before polling again
-						await new Promise((res) => setTimeout(res, 5000)); // wait 5 seconds
-					} else {
-						throw new NodeOperationError(this.getNode(), `Unexpected status code ${statusCode}`, {
-							itemIndex: i,
-						});
-					}
-				}
-
-				if (!finalResult) {
-					throw new NodeOperationError(this.getNode(), 'Execution timed out after 10 minutes', {
-						itemIndex: i,
-					});
-				}
-
-				returnData.push(finalResult);
-			} catch (error) {
-				if (this.continueOnFail()) {
-					returnData.push({
-						error: error.message,
-						json: {},
-						pairedItem: { item: i },
-					});
+					returnData.push(errorResult);
+					storedState.processedResults = returnData;
+					storedState.currentItemIndex = i + 1;
 				} else {
 					throw new NodeOperationError(this.getNode(), `Error executing Agent: ${error.message}`, {
 						itemIndex: i,
@@ -374,6 +461,10 @@ export class PromptLayerRunAgent implements INodeType {
 			}
 		}
 
-		return [this.helpers.returnJsonArray(returnData)];
+		// All items processed successfully - clean up state and return results
+		delete storedState.currentItemIndex;
+		delete storedState.processedResults;
+
+		return [returnData];
 	}
 }
