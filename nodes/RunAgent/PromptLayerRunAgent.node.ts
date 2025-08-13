@@ -8,6 +8,7 @@ import {
 	IRequestOptions,
 	ILoadOptionsFunctions,
 	INodePropertyOptions,
+	sleep,
 } from 'n8n-workflow';
 
 /**
@@ -108,7 +109,8 @@ export class PromptLayerRunAgent implements INodeType {
 				description: 'A dictionary of input variables required by the Agent',
 			},
 			{
-				displayName: 'Looking for custom n8n nodes or solutions? <a href="https://thinkbot.agency/?utm_source=n8n&utm_medium=node&utm_campaign=promptlayer" target="_blank">thinkbot.agency</a>',
+				displayName:
+					'Looking for custom n8n nodes or solutions? <a href="https://thinkbot.agency/?utm_source=n8n&utm_medium=node&utm_campaign=promptlayer" target="_blank">thinkbot.agency</a>',
 				name: 'thinkbotAdvert',
 				type: 'notice',
 				default: '',
@@ -344,7 +346,7 @@ export class PromptLayerRunAgent implements INodeType {
 						break;
 					} else if (statusCode === 202) {
 						// Agent still processing, wait before polling again
-						await new Promise((res) => setTimeout(res, 5000)); // wait 5 seconds
+						await sleep(5000); // wait 5 seconds
 					} else {
 						throw new NodeOperationError(this.getNode(), `Unexpected status code ${statusCode}`, {
 							itemIndex: i,
