@@ -9,6 +9,7 @@ import {
 	ILoadOptionsFunctions,
 	INodePropertyOptions,
 	sleep,
+	NodeConnectionType,
 } from 'n8n-workflow';
 
 /**
@@ -38,8 +39,8 @@ export class PromptLayerRunAgent implements INodeType {
 		defaults: {
 			name: 'PromptLayer Run Agent',
 		},
-		inputs: ['main'],
-		outputs: ['main'],
+		inputs: [NodeConnectionType.Main],
+		outputs: [NodeConnectionType.Main],
 		credentials: [
 			{
 				name: 'runAgentApi',
